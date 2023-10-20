@@ -20,7 +20,9 @@ VITE_TRANSCRIBE_AUDIO_SOURCE=Microphone
 Set `VITE_TRANSCRIBE_AUDIO_SOURCE=ScreenCapture` if you want to capture audio from a browser tab. Default = audio will be captured from Microphone
 
 4. Run the Web application locally
+
   `yarn`
+  
   `yarn dev`
 
 5. From the browser, go to the web application localhost url (eg. `http://localhost:5173`) and login using the Cognito user id setup in Step 2
