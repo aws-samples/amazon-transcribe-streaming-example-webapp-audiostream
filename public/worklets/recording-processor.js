@@ -1,3 +1,6 @@
+// Based on sample from 
+// https://github.com/GoogleChromeLabs/web-audio-samples/blob/main/src/audio-worklet/migration/worklet-recorder/recording-processor.js
+
 class RecordingProcessor extends AudioWorkletProcessor {
   constructor(options) {
     super();
@@ -23,7 +26,6 @@ class RecordingProcessor extends AudioWorkletProcessor {
     this.recordedFrames = 0;
     this.isRecording = false;
 
-    // We will use a timer to gate our messages; this one will publish at 60hz
     this.framesSinceLastPublish = 0;
     this.publishInterval = this.sampleRate * 5;
 
