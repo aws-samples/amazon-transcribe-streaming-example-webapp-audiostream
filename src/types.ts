@@ -27,5 +27,6 @@ export type RecordingProperties = {
 export type MessageDataType = {
   message: string,
   buffer: Array<Float32Array>,
+  // buffer: ArrayBuffer,
   recordingLength: number
 };

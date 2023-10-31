@@ -7,6 +7,7 @@ class RecordingProcessor extends AudioWorkletProcessor {
     this.sampleRate = 0;
     this.maxRecordingFrames = 0;
     this.numberOfChannels = 0;
+    this._frameSize = 128;
 
     if (options && options.processorOptions) {
       const {
@@ -20,9 +21,9 @@ class RecordingProcessor extends AudioWorkletProcessor {
       this.numberOfChannels = numberOfChannels;
     }
 
-    this._recordingBuffer = new Array(this.numberOfChannels)
-        .fill(new Float32Array(this.maxRecordingFrames));
-
+    this._leftRecordingBuffer = new Float32Array(this.maxRecordingFrames);
+    this._rightRecordingBuffer = new Float32Array(this.maxRecordingFrames);
+    
     this.recordedFrames = 0;
     this.isRecording = false;
 
@@ -37,21 +38,24 @@ class RecordingProcessor extends AudioWorkletProcessor {
   }
 
   process(inputs, outputs) {
+    let currentSample = 0.0;
     for (let input = 0; input < 1; input++) {
       for (let channel = 0; channel < this.numberOfChannels; channel++) {
         for (let sample = 0; sample < inputs[input][channel].length; sample++) {
-          const currentSample = inputs[input][channel][sample];
 
-          // Copy data to recording buffer.
+          currentSample = inputs[input][channel][sample];
+
           if (this.isRecording) {
-            this._recordingBuffer[channel][sample+this.recordedFrames] =
-                currentSample;
+            if (channel == 0) {
+              this._leftRecordingBuffer[sample+this.recordedFrames] = currentSample;
+            } else { channel == 1} {
+              this._rightRecordingBuffer[sample+this.recordedFrames] = currentSample;
+            }
           }
-
           // Pass data directly to output, unchanged.
           outputs[input][channel][sample] = currentSample;
-
         }
+
       }
     }
 
@@ -59,33 +63,41 @@ class RecordingProcessor extends AudioWorkletProcessor {
 
     // Validate that recording hasn't reached its limit.
     if (this.isRecording) {
-      if (this.recordedFrames + 128 < this.maxRecordingFrames) {
-        this.recordedFrames += 128;
+      if (this.recordedFrames + this._frameSize < this.maxRecordingFrames) {
+        this.recordedFrames += this._frameSize;
 
         // Post a recording recording length update on the clock's schedule
         if (shouldPublish) {
-
+          const recordingBuffer = new Array(this.numberOfChannels)
+              .fill(new Float32Array(this.maxRecordingFrames));
+          recordingBuffer[0] = this._leftRecordingBuffer;
+          recordingBuffer[1] = this._rightRecordingBuffer;
           this.port.postMessage({
             message: 'SHARE_RECORDING_BUFFER',
-            buffer: this._recordingBuffer,
+            buffer: recordingBuffer,
             recordingLength: this.recordedFrames
           });
           this.framesSinceLastPublish = 0;
           this.recordedFrames = 0
         } else {
-          this.framesSinceLastPublish += 128;
+          this.framesSinceLastPublish += this._frameSize;
         }
       } else {
-        this.recordedFrames += 128;
+        this.recordedFrames += this._frameSize;
+
+        const recordingBuffer = new Array(this.numberOfChannels)
+            .fill(new Float32Array(this.maxRecordingFrames));
+        recordingBuffer[0] = this._leftRecordingBuffer;
+        recordingBuffer[1] = this._rightRecordingBuffer;
+
         this.port.postMessage({
           message: 'SHARE_RECORDING_BUFFER',
-          buffer: this._recordingBuffer,
+          buffer: recordingBuffer,
           recordingLength: this.recordedFrames
         });
 
         this.recordedFrames = 0;
         this.framesSinceLastPublish = 0;
-
       } 
     } else {
       console.log('stopping worklet processor node')
